@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 
-    Copyright (c) 2010, 2022 Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2010, 2023 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License v. 2.0, which is available at
@@ -761,6 +761,16 @@ Client client = ClientBuilder.newClient(clientConfig);</programlisting>
             register &lit.jersey.client.Connector; instances in the Jersey &jersey.client.ClientConfig;. The new
             &lit.jersey.client.ConnectorProvider; SPI must be used instead to configure a custom client-side transport connector.
         </para>
+        <para>
+            A &jersey.client.ConnectorProvider; can also be set by a property on a &lit.jaxrs.client.ClientBuilder; starting with
+            Jersey 2.40. The following example shows how to setup the custom Grizzly Asynchronous HTTP Client based
+            &lit.jersey.client.ConnectorProvider; in a Jersey client instance:
+            <programlisting language="java" linenumbering="numbered">Client client = ClientBuilder.newBuilder()
+    .property(ClientProperties.CONNECTOR_PROVIDER, "org.glassfish.jersey.grizzly.connector.GrizzlyConnectorProvider")
+    .build();</programlisting>
+
+            For more information about the property see <xref linkend="appendix-properties"/>.
+        </para>
         <section>
             <title>Client Connectors Properties</title>
             <para>
@@ -1088,8 +1098,22 @@ Client client = ClientBuilder.newBuilder().sslContext(sslContext).build();</prog
             <para>
                 See javadoc of the &jersey.client.HttpAuthenticationFeature; for more details.
             </para>
-    </section>
+        </section>
 
+        <section>
+            <title><anchor xml:id="SNI"/>Server Name Indication (SNI) Support</title>
+            <para>
+                When using SSL/TLS protocols for the connection, <literal>SNIHostName</literal> is set automatically
+                based on the host name in the HTTPS request.
+            </para>
+            <para>
+                There might be use-cases where the <literal>SNIHostName</literal> is required to be set for other host
+                than the host specified in the HTTPS request. For those cases, when the HTTP header <literal>Host</literal>
+                is set, the <literal>SNIHostName</literal> is set for the host specified in the <literal>Host</literal> header.
+                Note that only <literal>Apache Connector, JDK Connector, Netty connector</literal>, and the default
+                <literal>HttpUrlConnector</literal> do support this feature.
+            </para>
+        </section>
 
     </section>
 

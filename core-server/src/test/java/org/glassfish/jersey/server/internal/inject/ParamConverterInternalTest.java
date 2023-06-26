@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023 Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2018 Payara Foundation and/or its affiliates.
  *
  * This program and the accompanying materials are made available under the
@@ -35,6 +35,7 @@ import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.ext.ParamConverter;
 import javax.ws.rs.ext.ParamConverterProvider;
@@ -43,16 +44,18 @@ import org.glassfish.jersey.internal.inject.ExtractorException;
 import org.glassfish.jersey.internal.inject.ParamConverters;
 import org.glassfish.jersey.internal.util.ReflectionHelper;
 import org.glassfish.jersey.internal.util.collection.ClassTypePair;
+import org.glassfish.jersey.model.internal.CommonConfig;
+import org.glassfish.jersey.model.internal.ComponentBag;
 import org.glassfish.jersey.server.ApplicationHandler;
 import org.glassfish.jersey.server.ContainerResponse;
 import org.glassfish.jersey.server.RequestContextBuilder;
 import org.glassfish.jersey.server.ResourceConfig;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests {@link ParamConverter param converters}.
@@ -284,11 +287,12 @@ public class ParamConverterInternalTest extends AbstractTest {
     @Test
     public void testDateParamConverterIsChosenForDateString() {
         initiateWebApplication();
+        final Configuration configuration = new CommonConfig(null, ComponentBag.EXCLUDE_EMPTY);
         final ParamConverter<Date> converter =
-                new ParamConverters.AggregatedProvider(null).getConverter(Date.class, Date.class, null);
+                new ParamConverters.AggregatedProvider(null, configuration).getConverter(Date.class, Date.class, null);
 
-        assertEquals("Unexpected date converter provider class",
-                ParamConverters.DateProvider.class, converter.getClass().getEnclosingClass());
+        assertEquals(ParamConverters.DateProvider.class, converter.getClass().getEnclosingClass(),
+                "Unexpected date converter provider class");
     }
 
     @Path("resource")

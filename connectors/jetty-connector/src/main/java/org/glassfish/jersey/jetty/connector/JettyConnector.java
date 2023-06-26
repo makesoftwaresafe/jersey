@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -31,10 +31,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -54,6 +52,7 @@ import org.eclipse.jetty.client.util.OutputStreamContentProvider;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.client.ClientRequest;
 import org.glassfish.jersey.client.ClientResponse;
+import org.glassfish.jersey.client.innate.ClientProxy;
 import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
 import org.glassfish.jersey.client.spi.Connector;
 import org.glassfish.jersey.internal.util.collection.ByteBufferInputStream;
@@ -155,7 +154,7 @@ class JettyConnector implements Connector {
         }
         if (httpClient == null) {
             final SSLContext sslContext = jaxrsClient.getSslContext();
-            final SslContextFactory sslContextFactory = new SslContextFactory();
+            final SslContextFactory.Client sslContextFactory = new SslContextFactory.Client(false);
             sslContextFactory.setSslContext(sslContext);
             httpClient = new HttpClient(sslContextFactory);
         }
@@ -163,8 +162,12 @@ class JettyConnector implements Connector {
 
         Boolean enableHostnameVerification = (Boolean) config.getProperties()
                 .get(JettyClientProperties.ENABLE_SSL_HOSTNAME_VERIFICATION);
-        if (enableHostnameVerification != null && enableHostnameVerification) {
-            client.getSslContextFactory().setEndpointIdentificationAlgorithm("https");
+        if (enableHostnameVerification != null) {
+            final String verificationAlgorithm = enableHostnameVerification ? "HTTPS" : null;
+            client.getSslContextFactory().setEndpointIdentificationAlgorithm(verificationAlgorithm);
+        }
+        if (jaxrsClient.getHostnameVerifier() != null) {
+            client.getSslContextFactory().setHostnameVerifier(jaxrsClient.getHostnameVerifier());
         }
 
         final Object connectTimeout = config.getProperties().get(ClientProperties.CONNECT_TIMEOUT);
@@ -187,19 +190,17 @@ class JettyConnector implements Connector {
             auth.addAuthentication((BasicAuthentication) basicAuthProvider);
         }
 
-        final Object proxyUri = config.getProperties().get(ClientProperties.PROXY_URI);
-        if (proxyUri != null) {
-            final URI u = getProxyUri(proxyUri);
+        final Optional<ClientProxy> proxy = ClientProxy.proxyFromConfiguration(config);
+        proxy.ifPresent(clientProxy -> {
             final ProxyConfiguration proxyConfig = client.getProxyConfiguration();
+            final URI u = clientProxy.uri();
             proxyConfig.getProxies().add(new HttpProxy(u.getHost(), u.getPort()));
 
-            final Object proxyUsername = config.getProperties().get(ClientProperties.PROXY_USERNAME);
-            if (proxyUsername != null) {
-                final Object proxyPassword = config.getProperties().get(ClientProperties.PROXY_PASSWORD);
+            if (clientProxy.userName() != null) {
                 auth.addAuthentication(new BasicAuthentication(u, "<<ANY_REALM>>",
-                        String.valueOf(proxyUsername), String.valueOf(proxyPassword)));
+                        clientProxy.userName(), clientProxy.password()));
             }
-        }
+        });
 
         if (disableCookies) {
             client.setCookieStore(new HttpCookieStore.Empty());
@@ -221,17 +222,6 @@ class JettyConnector implements Connector {
             throw new ProcessingException("Failed to start the client.", e);
         }
         this.cookieStore = client.getCookieStore();
-    }
-
-    @SuppressWarnings("ChainOfInstanceofChecks")
-    private static URI getProxyUri(final Object proxy) {
-        if (proxy instanceof URI) {
-            return (URI) proxy;
-        } else if (proxy instanceof String) {
-            return URI.create((String) proxy);
-        } else {
-            throw new ProcessingException(LocalizationMessages.WRONG_PROXY_URI_TYPE(ClientProperties.PROXY_URI));
-        }
     }
 
     /**
@@ -328,8 +318,14 @@ class JettyConnector implements Connector {
         request.followRedirects(clientRequest.resolveProperty(ClientProperties.FOLLOW_REDIRECTS, true));
         final Object readTimeout = clientRequest.resolveProperty(ClientProperties.READ_TIMEOUT, -1);
         if (readTimeout != null && readTimeout instanceof Integer && (Integer) readTimeout > 0) {
-            request.timeout((Integer) readTimeout, TimeUnit.MILLISECONDS);
+            request.idleTimeout((Integer) readTimeout, TimeUnit.MILLISECONDS);
         }
+
+        final Object totalTimeout = clientRequest.resolveProperty(JettyClientProperties.TOTAL_TIMEOUT, -1);
+        if (totalTimeout != null && totalTimeout instanceof Integer && (Integer) totalTimeout > 0) {
+            request.timeout((Integer) totalTimeout, TimeUnit.MILLISECONDS);
+        }
+
         return request;
     }
 
@@ -406,8 +402,8 @@ class JettyConnector implements Connector {
         final AtomicBoolean callbackInvoked = new AtomicBoolean(false);
         final Throwable failure;
         try {
-            final CompletableFuture<ClientResponse> responseFuture =
-                    new CompletableFuture<ClientResponse>().whenComplete(
+            final CompletableFuture<ClientResponse> responseFuture = new CompletableFuture<ClientResponse>();
+            responseFuture.whenComplete(
                             (clientResponse, throwable) -> {
                                 if (throwable != null && throwable instanceof CancellationException) {
                                     // take care of future cancellation

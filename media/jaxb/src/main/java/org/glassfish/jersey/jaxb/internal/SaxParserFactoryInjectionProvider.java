@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -21,6 +21,7 @@ import org.glassfish.jersey.jaxb.FeatureSupplier;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.Configuration;
+import javax.ws.rs.core.Context;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.util.LinkedHashMap;
@@ -49,11 +50,12 @@ public class SaxParserFactoryInjectionProvider extends AbstractXmlFactory<SAXPar
      */
     // TODO This provider should be registered and configured via a feature.
     @Inject
-    public SaxParserFactoryInjectionProvider(final Configuration config) {
+    public SaxParserFactoryInjectionProvider(@Context final InjectionManager injectionManager,
+                                             @Context final Configuration config) {
         super(config);
+        this.injectionManager = injectionManager;
     }
 
-    @Inject
     private InjectionManager injectionManager;
 
     @Override

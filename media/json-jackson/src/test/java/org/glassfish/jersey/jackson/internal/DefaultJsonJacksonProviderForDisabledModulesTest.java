@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -23,16 +23,17 @@ import org.glassfish.jersey.jackson.internal.model.JAXBServiceTest;
 import org.glassfish.jersey.jackson.internal.model.ServiceTest;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Configuration;
+import javax.ws.rs.core.Context;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class DefaultJsonJacksonProviderForDisabledModulesTest extends JerseyTest {
     @Override
@@ -55,6 +56,9 @@ public class DefaultJsonJacksonProviderForDisabledModulesTest extends JerseyTest
     private static class TestJacksonJaxbJsonProvider extends JacksonJaxbJsonProvider {
 
         @Inject
+        public TestJacksonJaxbJsonProvider(@Context Configuration configuration) {
+            this.configuration = configuration;
+        }
         private Configuration configuration;
 
         @PostConstruct

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -32,7 +33,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Configuration;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -44,10 +44,10 @@ import org.glassfish.jersey.message.internal.MediaTypes;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.test.JerseyTest;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Various MessageBodyWriter tests.
@@ -75,9 +75,13 @@ public class MessageBodyWriterTest extends JerseyTest {
     @Provider
     @Produces("text/plain")
     public static class OverridingStringProvider implements MessageBodyWriter<String> {
+        private final Configuration config;
 
-        @Context
-        private Configuration config;
+        @Inject
+        public OverridingStringProvider(Configuration config) {
+            this.config = config;
+        }
+
 
         @Override
         public boolean isWriteable(
@@ -120,9 +124,12 @@ public class MessageBodyWriterTest extends JerseyTest {
     @Provider
     @Produces("text/html")
     public static class HtmlStringProvider implements MessageBodyWriter<String> {
-
-        @Context
         private Configuration config;
+
+        @Inject
+        public HtmlStringProvider(Configuration config) {
+            this.config = config;
+        }
 
         @Override
         public boolean isWriteable(

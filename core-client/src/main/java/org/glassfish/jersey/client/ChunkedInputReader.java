@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -24,6 +24,7 @@ import java.lang.reflect.Type;
 import javax.ws.rs.ConstrainedTo;
 import javax.ws.rs.RuntimeType;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
@@ -43,10 +44,15 @@ import org.glassfish.jersey.message.MessageBodyWorkers;
 @ConstrainedTo(RuntimeType.CLIENT)
 class ChunkedInputReader implements MessageBodyReader<ChunkedInput> {
 
+    private final Provider<MessageBodyWorkers> messageBodyWorkers;
+    private final Provider<PropertiesDelegate> propertiesDelegateProvider;
+
     @Inject
-    private Provider<MessageBodyWorkers> messageBodyWorkers;
-    @Inject
-    private Provider<PropertiesDelegate> propertiesDelegateProvider;
+    public ChunkedInputReader(@Context Provider<MessageBodyWorkers> messageBodyWorkers,
+                              @Context Provider<PropertiesDelegate> propertiesDelegateProvider) {
+        this.messageBodyWorkers = messageBodyWorkers;
+        this.propertiesDelegateProvider = propertiesDelegateProvider;
+    }
 
     @Override
     public boolean isReadable(Class<?> aClass, Type type, Annotation[] annotations, MediaType mediaType) {
